@@ -1,50 +1,55 @@
 <?php
+print("Premiers pas avec la gestion des erreurs (exceptions) \n\n")
+;require 'vendor/autoload.php';
 
-require 'vendor/autoload.php';
-
+use PDOException;
 use Monolog\Level;
 use Monolog\Logger;
+//use PHPMailer\PHPMailer\PHPMailer;
 use Monolog\Handler\StreamHandler;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\PHPMailer;
 use Symfony\Component\Dotenv\Dotenv;
 
+function addfighter($l, $DATABASE_HOST, $DATABASE_NAME, $DATABASE_USER, $DATABASE_PASSWORD, $DATABASE_PORT, $DATABASE_DIALECT)
+{
+    try
+    {
+        $l->info("try to connect to the database $DATABASE_NAME on $DATABASE_HOST:$DATABASE_PORT");
+        $dbh = new PDO("$DATABASE_DIALECT:host=$DATABASE_HOST;port=$DATABASE_PORT;dbname=$DATABASE_NAME", $DATABASE_USER, $DATABASE_PASSWORD);
 
-print("Premiers pas avec composer \n\n");
+        $stmt = $dbh->prepare("INSERT INTO fighters (name, strength, defense) VALUES (:name, :strength, :defense)");
 
-// create a log channel
-$log = new Logger('Application SIO');
-$log->pushHandler(new StreamHandler('log/info.log', Level::Warning));
+        $name     = "Miss Fortune";
+        $strength = 100;
+        $defense  = 50;
 
-$dotenv = new Dotenv();
-$dotenv->load(__DIR__.'/.env');
+        $stmt->bindParam(':name', $name);
+        $stmt->bindParam(':strength', $strength);
+        $stmt->bindParam(':defense', $defense);
+        $stmt->execute();
 
-$log->info("Démarrage de l'envoi d'un mail");
-$mail = new PHPMailer(true);
-
-try {
-    $mail = new PHPMailer(true);
-
-    $mail->isSMTP();
-    $mail->Host = $_ENV['SMTP_HOST'];
-    $mail->SMTPAuth = true;
-    $mail->Username = $_ENV['SMTP_USERNAME'];
-    $mail->Password = $_ENV['SMTP_PASSWORD'];
-    $mail->SMPTSecure = PHPMailer::ENCRYPTION_SMTPS;
-    $mail->Port = $_ENV['SMTP_PORT'];
-
-    $mail->setFrom($_ENV['SMTP_USERNAME'], 'Mailer');
-    $mail->addAddress('brewen68@ik.me', 'Brewen Frotin');
-    $mail->Subject = 'Here is the subject';
-    $mail->Body    = 'This is the HTML message body <b>in bold!</b>';
-
-    $mail->send();
-    echo 'Message has been sent';
-} catch (Exception $e) {
-    $log->error( "Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        $l->info("Le combattant a été ajouté dans la base de données");
+    } catch (PDOException $th) {
+        $l->error("Connection failed: " . $th->getMessage());
+    }
 }
-$log->info("Fin de l'envoie d'un mail");
+function checkStrength($strength) {
+    if($strength < 0) {
+        throw new Exception('La force du guerrier ne peut pas être négative');
+    }
+}
 
 // add records to the log
-$log->warning('Foo');
-$log->error('Bar');
+$log = new Logger("'Application SIO");
+$log->pushHandler(new StreamHandler('log/info.log', Level::Debug));
+
+$dotenv = new Dotenv();
+$dotenv->load(__DIR__ . '/.env');
+
+// addfighter($log, $_ENV['DATABASE_HOST'], $_ENV['DATABASE_NAME'], $_ENV['DATABASE_USER'], $_ENV['DATABASE_PASSWORD'], $_ENV['DATABASE_PORT'], $_ENV['DATABASE_DIALECT']);
+try {
+    // Code qui peut lever une exception
+    checkStrength(-5);
+} catch(\Throwable $th) {
+    echo 'Erreur : ' . $th->getMessage() . "\n\n";
+}
+echo "Le programme continue. \n\n";
